@@ -1,0 +1,17 @@
+https://www.youtube.com/watch?v=fJ1_un39T1o&ab_channel=TheSecretMindset
+
+1- Market 30-70 bandının üzerinde yada altında uzun süre takılabilir.
+(Coin piyasası için geçerli mi bakmak lazım. Hatta veriler üzerinde geçmişe dönük
+RSI yada başka indikatörlerin performanslarını denemek iyi bir yöntem olur.
+
+2- Destek ve direnç noktalarını RSI ile birlikte kullanılmasını öneriyor.
+Böylelikle büyük kazançları kaçımamış ve büyük kayıplardan kurtulmuş oluruz.
+Örnek olarak RSI +70 ve önemli direnç noktasında satış yapmak iyi bir satış olabilir.
+
+3- Piyasa yükselişteyken RSI düşüşte olabilir. Tam tersi piyasa düşüşteyken RSI
+yükselişte olabilir. Böyle durumlarda Trend çizgisinini (trend line) takip etmek ve 
+trend çizgisinin kırılıp kırılmadığına bakmak önemli.
+
+Sanırım 4 ve 5. başlıklarda vardı.
+Ayrıca isndikatörlerle alakalı python kütüphanesi var.
+
