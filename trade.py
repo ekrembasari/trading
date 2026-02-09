@@ -13,7 +13,7 @@ accountId = config.acc_number
 try:
     ig_service.switch_account(accountId, True)
     print("Successfully switched the default account to {}".format(accountId))
-except:
+except Exception as e:
     print("Your account {} has been already set as default".format(accountId))
 
 while True:
@@ -40,7 +40,7 @@ def switch_account():
     try:
         res = ig_service.switch_account(accountId, True)
         print("Successfully switched the default account to {}".format(accountId))
-    except:
+    except Exception as e:
         print("Your account {} has been already set as default".format(accountId))
 
 
@@ -72,7 +72,7 @@ def buy_sell_trigger():
         f = open('last_id', 'r')
         last_id = int(f.readlines()[0][:-1])
         f.close()
-    except:
+    except (FileNotFoundError, ValueError):
         last_id = 0
     
     try:
