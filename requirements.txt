@@ -1,0 +1,4 @@
+trading-ig
+ccxt
+pandas
+requests

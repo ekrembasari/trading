@@ -1,10 +1,12 @@
+import os
+
 
 class config(object):
-    username = "basari.ekrem@gmail.com"
-    password = "Noparola10"
-    api_key = "d0cfEABbA090BE88A264548c6362FA85jml7i9FcOZuSHCKmsQUz7AK0Ns57N3Pl"
-    acc_type = "LIVE"  # LIVE / DEMO
-    acc_number = "299502" # xxxx (CFD), xxxx (spread betting)
+    username = os.environ.get("IG_USERNAME", "")
+    password = os.environ.get("IG_PASSWORD", "")
+    api_key = os.environ.get("IG_API_KEY", "")
+    acc_type = os.environ.get("IG_ACC_TYPE", "DEMO")
+    acc_number = os.environ.get("IG_ACC_NUMBER", "")
 
     # define parameters for the strategy
     EPIC_ID = "IX.D.FTSE.DAILY.IP" # This one is IG compatible id of FTSE100

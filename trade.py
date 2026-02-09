@@ -1,10 +1,18 @@
 from trading_ig import IGService
 from trading_ig.config import config
 from datetime import datetime
+import logging
 import pandas as pd
 import time
 
 import requests
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
+logger = logging.getLogger(__name__)
 
 ig_service = IGService(config.username, config.password, config.api_key, config.acc_type)
 
@@ -12,17 +20,17 @@ ig_service = IGService(config.username, config.password, config.api_key, config.
 accountId = config.acc_number
 try:
     ig_service.switch_account(accountId, True)
-    print("Successfully switched the default account to {}".format(accountId))
+    logger.info("Successfully switched the default account to %s", accountId)
 except Exception as e:
-    print("Your account {} has been already set as default".format(accountId))
+    logger.info("Your account %s has been already set as default", accountId)
 
 while True:
     try:
         ig_service.create_session()
-        print("Session created!")
+        logger.info("Session created!")
         break
     except Exception as e:
-        print(e)
+        logger.error(e)
         time.sleep(1)
         continue
 
@@ -39,16 +47,16 @@ wait_candles_num = config.WAIT_CANDLES_NUM
 def switch_account():
     try:
         res = ig_service.switch_account(accountId, True)
-        print("Successfully switched the default account to {}".format(accountId))
+        logger.info("Successfully switched the default account to %s", accountId)
     except Exception as e:
-        print("Your account {} has been already set as default".format(accountId))
+        logger.info("Your account %s has been already set as default", accountId)
 
 
 def get_donchian():
     try:
         response = ig_service.fetch_historical_prices_by_epic_and_num_points(epic, resolution, donchian_period+5)
     except Exception as e:
-        print(e)
+        logger.error(e)
         return 0, 0
 
     df_ask = response['prices']['ask']
@@ -69,9 +77,8 @@ def buy_sell_trigger():
     sell_trigger = False
 
     try:
-        f = open('last_id', 'r')
-        last_id = int(f.readlines()[0][:-1])
-        f.close()
+        with open('last_id', 'r') as f:
+            last_id = int(f.readline().strip())
     except (FileNotFoundError, ValueError):
         last_id = 0
     
@@ -79,7 +86,7 @@ def buy_sell_trigger():
         url = 'https://collect2.com/api/46fb7ae8-2126-49c1-ad73-6ce4ea2f69df/datarecord/'
         res = requests.get(url).json()
     except Exception as e:
-        print(e)
+        logger.error(e)
         return False, False
 
     if res["count"] == 0:
@@ -89,9 +96,8 @@ def buy_sell_trigger():
         return False, False
     else:
         last_id = res["results"][0]["id"]
-        f = open('last_id', 'w')
-        f.write(str(last_id)+'\n')
-        f.close()
+        with open('last_id', 'w') as f:
+            f.write(str(last_id) + '\n')
 
         trigger = res["results"][0]["record"]["type"]
         if trigger == "long":
@@ -107,12 +113,12 @@ def get_size(action, order_price, stop_loss):
     try:
         account_info = ig_service.fetch_accounts()
     except Exception as e:
-        print(e)
+        logger.error(e)
         return 0
 
-    print(account_info)
+    logger.debug(account_info)
     balance = account_info[account_info['accountId']==accountId].reset_index(drop=True).iloc[0]['available']
-    print(balance)
+    logger.info("Balance: %s", balance)
 
     equity_max = (((balance * 20) / order_price) * (100 - equity_max_perc) / 100) // 0.01 / 100
     if action == 'BUY':
@@ -120,7 +126,7 @@ def get_size(action, order_price, stop_loss):
     else:
         stop_loss_max = abs(((balance * risk/100) / (stop_loss - order_price)) // 0.01 / 100)
     
-    print(equity_max, stop_loss_max)
+    logger.info("equity_max=%.2f stop_loss_max=%.2f", equity_max, stop_loss_max)
 
     size = min(equity_max, stop_loss_max)
     return size
@@ -130,11 +136,11 @@ def close_positions(action):
     try:
         current_positions = ig_service.fetch_open_positions()
     except Exception as e:
-        print(e)
+        logger.error(e)
         return False
 
     if current_positions.shape[0] < 1:
-        print("No open positions to close...")
+        logger.info("No open positions to close...")
         return True
 
     current_position = current_positions.iloc[0]
@@ -148,40 +154,40 @@ def close_positions(action):
         try:
             res = ig_service.close_open_position(deal_id, action, None, None, None, 'MARKET', None, size)
         except Exception as e:
-            print(e)
+            logger.error(e)
             return False
 
         if res['reason'] == "SUCCESS":
-            print('Position closed successfully!')
+            logger.info("Position closed successfully!")
             return True
         else:
-            print('Position not closed due to {} reason.'.format(res['reason']))
+            logger.warning("Position not closed due to %s reason.", res['reason'])
             return False
 
-    print("Previous position is in the same direction.")
+    logger.info("Previous position is in the same direction.")
     return False
 
 
 def place_order(action, stop_loss):
     order_flag = close_positions(action)
     if not order_flag:
-        print("Skip trade...")
+        logger.info("Skip trade...")
         return None
     
     try:
         current_market = ig_service.fetch_market_by_epic(epic)['snapshot']
     except Exception as e:
-        print(e)
+        logger.error(e)
         return None
 
-    print(current_market)
+    logger.debug(current_market)
     if action == 'BUY':
         order_price = current_market['offer']
     else:
         order_price = current_market['bid']
 
     size = get_size(action, order_price, stop_loss)
-    print(order_price, size)
+    logger.info("order_price=%s size=%s", order_price, size)
     if size < 1:
         return None
 
@@ -204,15 +210,13 @@ def place_order(action, stop_loss):
             trailing_stop=None,
             trailing_stop_increment=None)
     except Exception as e:
-        print(e)
+        logger.error(e)
         return None
 
     if res_create['reason'] == 'SUCCESS':
-        print("Order placed successfully! Here is your order detail.")
-        print(res_create)
+        logger.info("Order placed successfully! %s", res_create)
     else:
-        print("Order not placed due to {}.".format(res_create['reason']))
-        print(res_create)
+        logger.warning("Order not placed due to %s. %s", res_create['reason'], res_create)
         return res_create
 
     return res_create
@@ -222,39 +226,37 @@ def trade():
 
     while True:
 
-        print(f"\n\nCurrent time: {datetime.now()}\n")
-
-        print("Start checking if any buy/sell condition meets now...")
+        logger.info("Start checking if any buy/sell condition meets now...")
 
         try:
-            print(ig_service.fetch_market_by_epic(config.EPIC_ID))
+            logger.debug(ig_service.fetch_market_by_epic(config.EPIC_ID))
         except Exception as e:
-            print(e)
+            logger.error(e)
             time.sleep(1)
             continue
 
         buy_trigger, sell_trigger = buy_sell_trigger()
 
         if buy_trigger:
-            print("Buying is triggered now.")
+            logger.info("Buying is triggered now.")
             buy_stop_loss, sell_stop_loss = get_donchian()
             if buy_stop_loss == 0:
                 continue
-            print("Stop loss: ", buy_stop_loss)
+            logger.info("Stop loss: %s", buy_stop_loss)
             place_order("BUY", buy_stop_loss)
         else:
-            print("Buying is not triggered.")
+            logger.debug("Buying is not triggered.")
         if sell_trigger:
-            print("Selling is triggered now.")
+            logger.info("Selling is triggered now.")
             buy_stop_loss, sell_stop_loss = get_donchian()
             if sell_stop_loss == 0:
                 continue
-            print("Stop loss: ", sell_stop_loss)
+            logger.info("Stop loss: %s", sell_stop_loss)
             place_order("SELL", sell_stop_loss)
         else:
-            print("Selling is not triggered now.")
+            logger.debug("Selling is not triggered now.")
 
-        print("\nLooping...\n")
+        logger.debug("Looping...")
         time.sleep(2)
 
 

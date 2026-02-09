@@ -1,0 +1,7 @@
+.env
+last_id
+__pycache__/
+*.pyc
+SS/
+Binance.txt
+BTCTurk.txt
