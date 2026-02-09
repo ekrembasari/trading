@@ -6,6 +6,7 @@ import pandas as pd
 import time
 
 import requests
+import telegram_notify
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +29,7 @@ while True:
     try:
         ig_service.create_session()
         logger.info("Session created!")
+        telegram_notify.send("🟢 *Bot started* — session created, monitoring %s" % config.EPIC_ID)
         break
     except Exception as e:
         logger.error(e)
@@ -159,9 +161,11 @@ def close_positions(action):
 
         if res['reason'] == "SUCCESS":
             logger.info("Position closed successfully!")
+            telegram_notify.send("🔒 *Position closed* — %s %s (size: %s)" % (direction, epic, size))
             return True
         else:
             logger.warning("Position not closed due to %s reason.", res['reason'])
+            telegram_notify.send("⚠️ *Close failed* — %s" % res['reason'])
             return False
 
     logger.info("Previous position is in the same direction.")
@@ -215,8 +219,13 @@ def place_order(action, stop_loss):
 
     if res_create['reason'] == 'SUCCESS':
         logger.info("Order placed successfully! %s", res_create)
+        telegram_notify.send(
+            "✅ *%s order placed*\n"
+            "Price: %s | Size: %s | Stop: %s" % (action, order_price, size, stop_loss)
+        )
     else:
         logger.warning("Order not placed due to %s. %s", res_create['reason'], res_create)
+        telegram_notify.send("❌ *Order rejected* — %s" % res_create['reason'])
         return res_create
 
     return res_create
